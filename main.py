@@ -56,10 +56,10 @@ def display_chat_history(user: str):
 
                 if chat['username'] == user:
                     chat_position = 'row-reverse'
-                    image_src = image_src.format("https://github.com/bayu-siddhi/test/blob/d3b43aa9daa5a755c08ab4ad61b860d64db36d64/static/user_icon.png")
+                    image_src = image_src.format("https://raw.githubusercontent.com/bayu-siddhi/test/refs/heads/main/static/user_icon.png")
                 elif chat['username'] in st.session_state.users:
                     chat_position = ''
-                    image_src = image_src.format("https://raw.githubusercontent.com/bayu-siddhi/test/refs/heads/main/static/user_icon.png")
+                    image_src = image_src.format("https://raw.githubusercontent.com/bayu-siddhi/test/refs/heads/main/static/ai_icon.png")
                 else:
                     chat_position = 'text-center'
                     image_src = None
