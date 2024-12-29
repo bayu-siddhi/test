@@ -16,20 +16,40 @@
 .chat-bubble {
     font-family: "Source Sans Pro", sans-serif, "Segoe UI", "Roboto", sans-serif;
     border: 1px solid transparent;
-    padding: 5px 10px;
+    padding: 7px 10px;
     margin: 0px 7px;
-    max-width: 70%;
+    max-width: 80%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
-.ai-bubble {
-    background: rgb(240, 242, 246);
-    border-radius: 10px;
-}
-
-.human-bubble {
-    background: linear-gradient(135deg, rgb(0, 178, 255) 0%, rgb(0, 106, 255) 100%); 
+.user-bubble {
     color: white;
-    border-radius: 20px;
+    position: relative;
+    border-radius: 10px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.user-bubble.timestamp {
+    background-color: #202c33;
+    color: #d1d1d1;
+    text-align: right;
+}
+
+.timestamp {
+    font-size: 12px;
+    color: #d1d1d1;
+    margin-top: 5px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.current-user-background {
+    background: #005c4b;
+}
+
+.opponent-background {
+    background: #363636;
 }
 
 .chat-icon {
