@@ -11,7 +11,7 @@ class WhatssAppParser:
             'message_system': r'- (.*)$',
             'message_first_line': r': (.*)$',
             'message_new_line': r'(.*)',
-            'attachment_file': r'(.*) \(file terlampir\)'  # Buat agar diterima dari input user
+            'attachment_file': r'(.*) \(file terlampir\)'  # TODO: Make it accept user input
         }
 
     def parse(self, path: str) -> list[dict]:
@@ -24,23 +24,23 @@ class WhatssAppParser:
             chat_message_index = 0
             for row in file: 
                 row = row.strip()
-                datetime = re.search(self.pattern['datetime'], row)  # Mendapatkan datetime pesan
+                datetime = re.search(self.pattern['datetime'], row)  # Get message datetime
                 if datetime is not None:  # Cek apakah ada datetime
-                    username = re.search(self.pattern['username'], row)  # Mendapatkan username pesan
+                    username = re.search(self.pattern['username'], row)  # Get message username
                     if username is not None: 
-                        # Jika ada username maka itu merupakan pesan dari pengguna
+                        # If there is a username then it is a message from the user
                         chat_message = re.search(self.pattern['message_first_line'], row)[1]
                         attachment_file = re.search(self.pattern['attachment_file'], chat_message)
                         if attachment_file is not None:
-                            # Jika ada file attachment maka simpan nama file nya
+                            # If there is an attachment file, save the file name.
                             data = {
                                 'datetime': datetime[1],
                                 'username': username[1],
-                                'message': attachment_file[1],
+                                'message': attachment_file[1].replace(u'\u200e', ''), # Hapus U+200E
                                 'is_file': True
                             }
                         else: 
-                            # Jika tidak ada file attachment maka merupakan pesan biasa
+                            # If there is no attachment file then it is a normal message.
                             data = {
                                 'datetime': datetime[1],
                                 'username': username[1],
@@ -48,7 +48,7 @@ class WhatssAppParser:
                                 'is_file': False
                             }
                     else: 
-                        # Jika tidak ada username maka pesan itu merupakan pesan dari SYSTEM
+                        # If there is no username then the message is a message from SYSTEM.
                         data = {
                             'datetime': datetime[1],
                             'username': "SYSTEM",
@@ -58,7 +58,7 @@ class WhatssAppParser:
                     chat_message_history.append(data) 
                     chat_message_index += 1
                 else: 
-                    # Jika tidak ada datetime maka pesan itu merupakan lanjutan dari pesan sebelumnya
+                    # If there is no datetime then the message is a continuation of the previous message.
                     message_new_line = re.search(self.pattern['message_new_line'], row)[1]
                     previous_chat_message_history = chat_message_history[chat_message_index - 1]
                     if previous_chat_message_history['is_file']:
@@ -66,10 +66,10 @@ class WhatssAppParser:
                         data = previous_chat_message_history.copy()
                         data['message'] = message_new_line
                         data['is_file'] = False
-                        chat_message_history.append(data)  # Simpan pesan ke list chat_message_history
+                        chat_message_history.append(data)  # Save messages to chat_message_history list
                         chat_message_index += 1  # Increment nilai index pesan
                     else: 
-                        # Jika bukan file attachment maka gabungkan pesan saat ini dengan pesan sebelumnya
+                        # If not an attachment file then merge the current message with the previous message
                         previous_chat_message = previous_chat_message_history['message']
                         chat_message_history[chat_message_index - 1]['message'] = f"{previous_chat_message}<br>{message_new_line}"
 
@@ -79,12 +79,3 @@ class WhatssAppParser:
         df.to_csv(csv_file, index=False)
 
         return chat_message_history
-
-
-if __name__=="__main__":
-    import os
-    chat_directory = 'chat'
-    chat_file = 'Chat WhatsApp dengan Qudsiyah Zahra.txt'
-    path = os.path.join(chat_directory, chat_file)
-    wa_parser = WhatssAppParser()
-    wa_parser.parse(path)
