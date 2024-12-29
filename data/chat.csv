@@ -1,11 +1,11 @@
 datetime,username,message,is_file
 2022-09-02 13:26:00,SYSTEM,"Pesan dan panggilan dienkripsi secara end-to-end. Tidak seorang pun di luar chat ini, termasuk WhatsApp, yang dapat membaca atau mendengarkannya. Ketuk untuk info selengkapnya.",False
 2022-09-02 13:26:00,ABC,"TEST",False
-2022-09-02 17:49:00,ABC,‎IMG-20220902-WA0004.jpg,True
+2022-09-02 17:49:00,ABC,IMG-20220902-WA0004.jpg,True
 2022-09-02 17:51:00,CDE,TEST2,False
 2022-09-02 17:51:00,CDE,TEST3,False
 2022-09-02 17:52:00,ABC,TEST4,False
 2022-09-02 17:52:00,CDE,TEST5,False
-2022-09-07 19:36:00,ABC,‎IMG-20220907-WA0008.ipynb,True
+2022-09-07 19:36:00,ABC,IMG-20220907-WA0008.ipynb,True
 2022-09-07 19:36:00,ABC,TEST6,False
 2022-09-07 19:53:00,CDE,TEST7,False
