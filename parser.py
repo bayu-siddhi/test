@@ -62,7 +62,7 @@ class WhatssAppParser:
                     message_new_line = re.search(self.pattern['message_new_line'], row)[1]
                     previous_chat_message_history = chat_message_history[chat_message_index - 1]
                     if previous_chat_message_history['is_file']:
-                        # Jika sebelumnya adalah file attachment maka pesan selanjutnya harus jadi pesan terpisah
+                        # If the previous message was an attachment file then the next message must be a separate message.
                         data = previous_chat_message_history.copy()
                         data['message'] = message_new_line
                         data['is_file'] = False
