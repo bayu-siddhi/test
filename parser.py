@@ -25,7 +25,7 @@ class WhatssAppParser:
             for row in file: 
                 row = row.strip()
                 datetime = re.search(self.pattern['datetime'], row)  # Get message datetime
-                if datetime is not None:  # Cek apakah ada datetime
+                if datetime is not None:  # Check if there is a datetime
                     username = re.search(self.pattern['username'], row)  # Get message username
                     if username is not None: 
                         # If there is a username then it is a message from the user
