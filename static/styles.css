@@ -18,13 +18,12 @@
     border: 1px solid transparent;
     padding: 7px 10px;
     margin: 0px 7px;
-    max-width: 80%;
+    max-width: 70%;
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
 
 .user-bubble {
-    color: white;
     position: relative;
     border-radius: 10px;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
@@ -38,18 +37,30 @@
 
 .timestamp {
     font-size: 12px;
-    color: #d1d1d1;
+    color: #B7B7B7;
     margin-top: 5px;
     display: flex;
     justify-content: flex-end;
 }
 
-.current-user-background {
+.user-background-dark {
+    color: white;
     background: #005c4b;
 }
 
-.opponent-background {
+.user-background-light {
+    color: black;
+    background: #d9fdd3;
+}
+
+.opponent-background-dark {
+    color: white;
     background: #363636;
+}
+
+.opponent-background-light {
+    color: black;
+    background: #f0f2f6;
 }
 
 .chat-icon {
