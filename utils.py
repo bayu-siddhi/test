@@ -1,14 +1,16 @@
 import os
 import time
 import base64
+import zipfile
 import pandas as pd
 import streamlit as st
 from pathlib import Path
-from parser import WhatssAppParser
 from streamlit_theme import st_theme
+from parser import WhatssAppParser
 from streamlit.components.v1 import html
 
 
+# https://discuss.streamlit.io/t/is-it-possible-to-create-a-sticky-header/33145/3
 STICKY_HEADER = '''
 <style>
     div[data-testid="stVerticalBlock"] div:has(div.fixed-header) {{
@@ -22,11 +24,12 @@ STICKY_HEADER = '''
     .fixed-header {{
         border-bottom: 0px solid black;
     }}
-</style>'''
+</style>
+'''
 
 
-def get_theme() -> dict:
-    theme = st_theme()
+def get_theme(key: str = None) -> dict:
+    theme = st_theme(key=key)
     time.sleep(1)
     return theme
 
@@ -51,9 +54,20 @@ def get_unique_dates(history_df: pd.DataFrame) -> list:
     ]
 
 
+# IMPORTANT: Cache the conversion to prevent computation on every rerun
+# https://docs.streamlit.io/develop/api-reference/widgets/st.download_button
+@st.cache_data
+def prepare_history_df(history_df: pd.DataFrame, uploaded_file_name: str) -> pd.DataFrame:
+    history_df = history_df.copy()
+    unused_path = os.path.join('data', uploaded_file_name)
+    history_df.loc[history_df['is_file'], 'message'] = history_df.loc[history_df['is_file'], 'message']\
+        .str.replace(unused_path, '', regex=False).str.replace(r'^.', '', regex=True)
+    return history_df
+
+
 # https://discuss.streamlit.io/t/scroll-to-page-section-that-is-being-rendered/77822/2
 # https://gist.github.com/skannan-maf/8c8ee1c5fdc34594c0c3bc0a22fb63f9
-def navigate_to_element(id: str):
+def navigate_to_element(id: str) -> None:
     html('''
     <script>
         // Time of creation of this script = {now}.
@@ -72,32 +86,24 @@ def navigate_to_element(id: str):
     )
 
 
-def get_chat_history(path: str) -> tuple[list, pd.DataFrame]:
-
-    try:
-        is_chat_csv_exist = False
-        path_tupple = os.path.splitext(path)
-        # path_extension = path_tupple[-1].lower()
-        path_csv = path_tupple[0] + '.csv'
-        is_chat_csv_exist = os.path.isfile(path_csv)
-        if is_chat_csv_exist:
-            history_df = pd.read_csv(path_csv)
-            history = history_df.to_dict('records')
-        else:
-            print("CSV tidak ditemukan")
-            wa_parser = WhatssAppParser()
-            history = wa_parser.parse(path)
-            history_df = pd.DataFrame(history)
-        history_df['datetime'] = pd.to_datetime(history_df['datetime'])
-    except Exception as e:
-        print(e)
+# https://discuss.streamlit.io/t/unzipping/28001/3
+# https://stackoverflow.com/questions/3451111/unzipping-files-in-python
+def get_chat_history(uploaded_file: str) -> tuple[list, pd.DataFrame]:
+    with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+        zip_ref.extractall("data")
     
-    return history, history_df
-
-
-def display_chat_history(user: str, history_df: pd.DataFrame) -> list:
+    wa_parser = WhatssAppParser()
+    directory_path = os.path.join('data', uploaded_file.name)
+    directory_path = os.path.splitext(directory_path)[0]
+    history_df = wa_parser.parse(directory_path=directory_path)
     
+    return history_df
+
+
+def display_chat_history(user: str, users: list, history_df: pd.DataFrame, theme_base: str = 'dark') -> None:
     chat_container = st.container()
+    user_profile = 'https://raw.githubusercontent.com/bayu-siddhi/whatsapp-chat-history-ui/refs/heads/main/static/user_icon.png'
+    opponent_profile = 'https://raw.githubusercontent.com/bayu-siddhi/whatsapp-chat-history-ui/refs/heads/main/static/ai_icon.png'
     history = history_df.to_dict('records')
 
     if history_df.empty is not True:
@@ -119,12 +125,12 @@ def display_chat_history(user: str, history_df: pd.DataFrame) -> list:
 
                 if chat['username'] == user:
                     chat_position = 'row-reverse'
-                    background_color = 'current-user-background'
-                    profile_src = profile_src.format("https://raw.githubusercontent.com/bayu-siddhi/whatsapp-chat-history-ui/refs/heads/main/static/user_icon.png")
-                elif chat['username'] in st.session_state.users:
+                    profile_src = profile_src.format(user_profile)
+                    background_color = 'user-background-dark' if theme_base == 'dark' else 'user-background-light'
+                elif chat['username'] in users:
                     chat_position = ''
-                    background_color = 'opponent-background'
-                    profile_src = profile_src.format("https://raw.githubusercontent.com/bayu-siddhi/whatsapp-chat-history-ui/refs/heads/main/static/ai_icon.png")
+                    profile_src = profile_src.format(opponent_profile)
+                    background_color = 'opponent-background-dark' if theme_base == 'dark' else 'opponent-background-light'
                 else:
                     chat_position = 'text-center'
                     background_color = ''
@@ -141,23 +147,23 @@ def display_chat_history(user: str, history_df: pd.DataFrame) -> list:
 
                 # Show image
                 if chat['is_file'] == True and (chat['message'].endswith(".jpg") or chat['message'].endswith(".png")):
-                    image_path = os.path.join('chat', chat['message'])
                     chat_row = f"""
                     <div class="chat-row {chat_position}">
                         {profile_src if profile_src is not None else '<div></div>'}
                         <div class="chat-bubble {'user-bubble' if profile_src is not None else ''} {background_color} img-fluid">
-                            <img src='data:image/jpg;base64,{image_to_bytes(image_path)}'>
+                            <img src='data:image/jpg;base64,{image_to_bytes(chat['message'])}'>
                             <span class="timestamp">{time_str}</span>
                         </div>
                     </div>"""
                     st.markdown(chat_row, unsafe_allow_html=True)
                 # Show other file
+                # https://stackoverflow.com/questions/55101162/aboutblankblocked-on-a-href-file-xxxlink-a-markdown-page
                 elif chat['is_file'] == True:
                     chat_row = f"""
                     <div class="chat-row {chat_position}">
                         {profile_src if profile_src is not None else '<div></div>'}
                         <div class="chat-bubble {'user-bubble' if profile_src is not None else ''} {background_color}">
-                            <a href='{os.path.join(Path(__file__).parent.resolve(), 'chat', chat['message'])}' target='_blank' style='color: white'>{chat['message']}</a>
+                            <a href='{os.path.join(Path(__file__).parent.resolve(), chat['message'])}' target='_blank'>{os.path.join(Path(__file__).parent.resolve(), chat['message'])}</a>
                             <span class="timestamp">{time_str}</span>
                         </div>
                     </div>"""
@@ -174,5 +180,4 @@ def display_chat_history(user: str, history_df: pd.DataFrame) -> list:
                     st.markdown(chat_row, unsafe_allow_html=True)
                 
                 prev_date_str = date_str_1
-    
-    return history
+        
