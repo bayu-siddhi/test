@@ -1,3 +1,4 @@
+import os
 import re
 import pandas as pd
 
@@ -14,13 +15,17 @@ class WhatssAppParser:
             'attachment_file': r'(.*) \(file terlampir\)'  # TODO: Make it accept user input
         }
 
-    def parse(self, path: str) -> list[dict]:
+    def parse(self, directory_path: str) -> pd.DataFrame:
         """Parse WhatsApp export chat file (.txt) to Pandas DataFrame and .csv file"""
 
-        assert path.endswith('.txt'), "Files must be in .txt extension"
+        for filename in os.listdir(directory_path):
+            if filename.endswith(".txt"):
+                txt_path = os.path.join(directory_path, filename)
+                attachment_path = os.path.join(directory_path, 'attachment')
+        
         chat_message_history = list()
 
-        with open(path, 'r', encoding='utf8') as file:
+        with open(txt_path, 'r', encoding='utf8') as file:
             chat_message_index = 0
             for row in file: 
                 row = row.strip()
@@ -36,8 +41,8 @@ class WhatssAppParser:
                             data = {
                                 'datetime': datetime[1],
                                 'username': username[1],
-                                'message': attachment_file[1].replace(u'\u200e', ''), # Hapus U+200E
-                                'is_file': True
+                                'message': os.path.join(attachment_path, attachment_file[1].replace(u'\u200e', '')),
+                                'is_file': True  # Remove U+200E
                             }
                         else: 
                             # If there is no attachment file then it is a normal message.
@@ -73,9 +78,7 @@ class WhatssAppParser:
                         previous_chat_message = previous_chat_message_history['message']
                         chat_message_history[chat_message_index - 1]['message'] = f"{previous_chat_message}<br>{message_new_line}"
 
-        df = pd.DataFrame(chat_message_history)
-        df['datetime'] = pd.to_datetime(df['datetime'], format='%d/%m/%y %H.%M')
-        csv_file = path[:-3] + 'csv'
-        df.to_csv(csv_file, index=False)
+        history_df = pd.DataFrame(chat_message_history)
+        history_df['datetime'] = pd.to_datetime(history_df['datetime'], format='%d/%m/%y %H.%M')
 
-        return chat_message_history
+        return history_df
