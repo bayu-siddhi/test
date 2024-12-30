@@ -1,72 +1,89 @@
 import os
+import utils
 import datetime
 import streamlit as st
-from dotenv import load_dotenv
-from utils import (
-    load_css,
-    get_theme,
-    STICKY_HEADER,
-    get_chat_history,
-    get_unique_dates,
-    navigate_to_element,
-    display_chat_history
-)
 
-# CONFIGURATION
-load_css()
-load_dotenv()
-CHAT_FILE = os.getenv('CHAT_FILE')
-CHAT_DIRECTORY = os.getenv('CHAT_DIRECTORY')
-PATH = os.path.join(CHAT_DIRECTORY, CHAT_FILE)
-
-# LOAD CHAT HISTORY
-if "history" not in st.session_state and "history_df" not in st.session_state:
-    st.session_state.history, st.session_state.history_df = get_chat_history(PATH)
-
-# LOAD ALL USERS
-if 'users' not in st.session_state:
-    st.session_state.users = list(st.session_state.history_df['username'].unique())
-    st.session_state.users.remove("SYSTEM")
 
 # SIDEBAR SETTINGS
 with st.sidebar:
-    theme = get_theme()
-    user = st.radio("Who is user?", st.session_state.users)
-    opponent = [u for u in st.session_state.users if u != user][0]
+    # Configuration
+    user = None
+    history_df = None
+    utils.load_css()
+    theme = utils.get_theme()
+    st.title('WhatsApp Chat History UI')
     
-    go_to_date = st.selectbox(
-        "Go to date", get_unique_dates(st.session_state.history_df),
-        index=None, placeholder="Select a date"
+    # Getting the uploaded file
+    uploaded_file = st.file_uploader(
+        label="Choose a chat history ZIP file to begin",
+        type=['zip'],
+        accept_multiple_files=False,
     )
 
-    if go_to_date is not None:
-        navigate_to_element(go_to_date)
+    if uploaded_file:
+        # Load dataset
+        if 'dataset_session' not in st.session_state or st.session_state.dataset_session != uploaded_file.name:
+            history_df = utils.get_chat_history(uploaded_file)
+            users = list(history_df['username'].unique())
+            users.remove("SYSTEM")
+            # Set dataset session
+            st.session_state.dataset_session = os.path.splitext(uploaded_file.name)[0]
 
-# CUSTOM CSS FOR THE STICKY HEAADER
-# https://discuss.streamlit.io/t/is-it-possible-to-create-a-sticky-header/33145/3
-header = st.container()
-header.title(opponent)
-header.write("""<div class='fixed-header'/>""", unsafe_allow_html=True)
-header_background = '#0e1117' if theme['base'] == 'dark' else '#ffffff'
-st.markdown(STICKY_HEADER.format(header_background=header_background), unsafe_allow_html=True)
+        # Dataset download button
+        is_download = st.download_button(
+            label="Download dataset as CSV",
+            data=utils.prepare_history_df(history_df, st.session_state.dataset_session)\
+                      .to_csv(index=False).encode("utf-8"),
+            file_name=f"{st.session_state.dataset_session}.csv",
+            mime="text/csv",
+        )
 
-# GETTING INPUT MESSAGE
-input_message = st.chat_input("Say something")
-if input_message:
-    current_datetime = datetime.datetime.now()
-    st.session_state.history.append({
-        'datetime': current_datetime,
-        'username': user,
-        'message': input_message,
-        'is_file': False
-    })
+        # Select user
+        user = st.selectbox(
+            "View chat as",
+            users,
+            index=None,
+            placeholder='Select a user to view in Chat Mode'
+        )
+        opponent = [u for u in users if u != user][0]
 
-    st.session_state.history_df.loc[len(st.session_state.history_df)] = [
-        current_datetime,
-        user,
-        input_message,
-        False
-    ]
+        # Go to chat by date
+        if user:
+            go_to_date = st.selectbox(
+                "Go to date",
+                utils.get_unique_dates(history_df),
+                index=None,
+                placeholder="Select a date"
+            )
+            if go_to_date is not None:
+                utils.navigate_to_element(go_to_date)
 
-# DISPLAY CHAT
-st.session_state.history = display_chat_history(user, st.session_state.history_df)
+
+# DISPLAY THE CHAT
+if 'user' in globals() and user is not None:
+    # Custom CSS for the sticky header
+    # https://discuss.streamlit.io/t/is-it-possible-to-create-a-sticky-header/33145/3
+    header = st.container()
+    header.title(opponent)
+    header.write("""<div class='fixed-header'/>""", unsafe_allow_html=True) 
+    header_background = '#0e1117' if theme['base'] == 'dark' else '#ffffff'
+    st.markdown(utils.STICKY_HEADER.format(header_background=header_background), unsafe_allow_html=True)
+    
+    # Getting input message
+    input_message = st.chat_input("Say something")
+    if input_message:
+        history_df.loc[len(history_df)] = [
+            datetime.datetime.now(),
+            st.session_state.user,
+            input_message,
+            False
+        ]
+
+    # Display the chat
+    utils.display_chat_history(user, users, history_df, theme['base'])
+
+# DISPLAY THE DATASET IN TABLE
+elif 'history_df' in globals() and history_df is not None:
+    st.title('Table Mode')
+    st.write(utils.prepare_history_df(history_df, st.session_state.dataset_session)\
+             .sort_values(by='datetime', ascending=False))
