@@ -4,13 +4,11 @@ import datetime
 import streamlit as st
 
 
-# SIDEBAR SETTINGS
 with st.sidebar:
     # Configuration
-    user = None
-    history_df = None
     utils.load_css()
     theme = utils.get_theme()
+    st.session_state.user = None
     st.title('WhatsApp Chat History UI')
     
     # Getting the uploaded file
@@ -20,38 +18,41 @@ with st.sidebar:
         accept_multiple_files=False,
     )
 
-    if uploaded_file:
-        # Load dataset
-        if 'dataset_session' not in st.session_state or st.session_state.dataset_session != uploaded_file.name:
-            history_df = utils.get_chat_history(uploaded_file)
-            users = list(history_df['username'].unique())
-            users.remove("SYSTEM")
-            # Set dataset session
-            st.session_state.dataset_session = os.path.splitext(uploaded_file.name)[0]
+if uploaded_file:
+    # Load dataset
+    uploaded_file_name = os.path.splitext(uploaded_file.name)[0]
+    if 'dataset_session' not in st.session_state or st.session_state.dataset_session != uploaded_file_name:
+        st.session_state.history_df = utils.get_chat_history(uploaded_file)
+        st.session_state.users = list(st.session_state.history_df['username'].unique())
+        st.session_state.users.remove("SYSTEM")
+        # Set dataset session
+        st.session_state.dataset_session = uploaded_file_name
 
+with st.sidebar:
+    if uploaded_file:
         # Dataset download button
-        is_download = st.download_button(
+        download = st.download_button(
             label="Download dataset as CSV",
-            data=utils.prepare_history_df(history_df, st.session_state.dataset_session)\
-                      .to_csv(index=False).encode("utf-8"),
+            data=utils.prepare_history_df(st.session_state.history_df, st.session_state.dataset_session)\
+                    .to_csv(index=False).encode("utf-8"),
             file_name=f"{st.session_state.dataset_session}.csv",
             mime="text/csv",
         )
 
         # Select user
-        user = st.selectbox(
+        st.session_state.user = st.selectbox(
             "View chat as",
-            users,
+            st.session_state.users,
             index=None,
             placeholder='Select a user to view in Chat Mode'
         )
-        opponent = [u for u in users if u != user][0]
+        opponent = [u for u in st.session_state.users if u != st.session_state.user][0]
 
         # Go to chat by date
-        if user:
+        if st.session_state.user:
             go_to_date = st.selectbox(
                 "Go to date",
-                utils.get_unique_dates(history_df),
+                utils.get_unique_dates(st.session_state.history_df),
                 index=None,
                 placeholder="Select a date"
             )
@@ -59,8 +60,8 @@ with st.sidebar:
                 utils.navigate_to_element(go_to_date)
 
 
-# DISPLAY THE CHAT
-if 'user' in globals() and user is not None:
+# # DISPLAY THE CHAT
+if st.session_state.user:
     # Custom CSS for the sticky header
     # https://discuss.streamlit.io/t/is-it-possible-to-create-a-sticky-header/33145/3
     header = st.container()
@@ -72,7 +73,7 @@ if 'user' in globals() and user is not None:
     # Getting input message
     input_message = st.chat_input("Say something")
     if input_message:
-        history_df.loc[len(history_df)] = [
+        st.session_state.history_df.loc[len(st.session_state.history_df)] = [
             datetime.datetime.now(),
             st.session_state.user,
             input_message,
@@ -80,14 +81,14 @@ if 'user' in globals() and user is not None:
         ]
 
     # Display the chat
-    utils.display_chat_history(user, users, history_df, theme['base'])
+    utils.display_chat_history(st.session_state.user, st.session_state.users, st.session_state.history_df, theme['base'])
 
 # DISPLAY THE DATASET IN TABLE
-elif 'history_df' in globals() and history_df is not None:
+elif uploaded_file and st.session_state.user is None:
     st.title('Table Mode')
     descending = st.toggle("Sort from newest to oldest", value=False, )
     if descending:
-        st.write(utils.prepare_history_df(history_df, st.session_state.dataset_session)\
+        st.write(utils.prepare_history_df(st.session_state.history_df, st.session_state.dataset_session)\
                  .sort_values(by='datetime', ascending=False))
     else:
-        st.write(utils.prepare_history_df(history_df, st.session_state.dataset_session))
+        st.write(utils.prepare_history_df(st.session_state.history_df, st.session_state.dataset_session))
