@@ -85,5 +85,9 @@ if 'user' in globals() and user is not None:
 # DISPLAY THE DATASET IN TABLE
 elif 'history_df' in globals() and history_df is not None:
     st.title('Table Mode')
-    st.write(utils.prepare_history_df(history_df, st.session_state.dataset_session)\
-             .sort_values(by='datetime', ascending=False))
+    descending = st.toggle("Sort from newest to oldest", value=False, )
+    if descending:
+        st.write(utils.prepare_history_df(history_df, st.session_state.dataset_session)\
+                 .sort_values(by='datetime', ascending=False))
+    else:
+        st.write(utils.prepare_history_df(history_df, st.session_state.dataset_session))
