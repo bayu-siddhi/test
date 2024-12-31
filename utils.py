@@ -59,7 +59,7 @@ def get_unique_dates(history_df: pd.DataFrame) -> list:
 @st.cache_data
 def prepare_history_df(history_df: pd.DataFrame, uploaded_file_name: str) -> pd.DataFrame:
     history_df = history_df.copy()
-    unused_path = os.path.join('data', uploaded_file_name)
+    unused_path = os.path.join('data', uploaded_file_name, 'attachment')
     history_df.loc[history_df['is_file'], 'message'] = history_df.loc[history_df['is_file'], 'message']\
         .str.replace(unused_path, '', regex=False).str.replace(r'^.', '', regex=True)
     return history_df
