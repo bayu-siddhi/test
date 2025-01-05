@@ -4,10 +4,11 @@
 
 A Streamlit UI to display the contents of a ZIP file from WhatsApp Chat History (.TXT and attachment directory) in a chat-like view, making it easier for users to revisit and read their chat history again.
 
-I created this project because a friend of mine lost their WhatsApp chat history without having a backup. This event inspired me to export the chat from my side and build a user interface (UI) that allows the chat to be read easily. Additionally, this project became an opportunity for me to hone my problem-solving skills and process log data (chat history) using regex techniques.
+I created this project because a friend of mine lost their WhatsApp chat history without having a backup. This event inspired me to export the chat from my side and build a user-interface* that allows the chat to be read easily. Additionally, this project became an opportunity for me to hone my problem-solving skills and process log data (chat history) using regex techniques.
 
 I hope you all enjoy the results of this project 😊
 
+> ***only for individual chat, not for group chat**
 
 # **Project Structure**
 

@@ -13,7 +13,7 @@ with st.sidebar:
     
     # Getting the uploaded file
     uploaded_file = st.file_uploader(
-        label="Choose a chat history ZIP file to begin",
+        label="Choose a chat history ZIP file to begin \n\n *only for individual chat, not for group chat",
         type=['zip'],
         accept_multiple_files=False,
     )
