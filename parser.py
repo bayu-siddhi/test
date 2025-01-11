@@ -7,21 +7,21 @@ class WhatssAppParser:
 
     def __init__(self) -> None:    
         self.pattern = {
-            'datetime': r'^(\d+\/\d+\/\d+ \d+\.\d+) -',
+            'datetime': r'^(\d+\/\d+\/\d+)[\,\s]+(\d+[\:\.]\d+) -',
             'username':  r'- (.*?): ',
             'message_system': r'- (.*)$',
             'message_first_line': r': (.*)$',
             'message_new_line': r'(.*)',
-            'attachment_file': r'(.*) \(file terlampir\)'  # TODO: Make it accept user input
+            'attachment_file': r'(.*) \(file (?:terlampir|attached)\)'  # TODO: Make it accept all languages
         }
 
-    def parse(self, directory_path: str) -> pd.DataFrame:
+    def parse(self, directory_path: str, attachment_path: str) -> pd.DataFrame:
         """Parse WhatsApp export chat file (.txt) to Pandas DataFrame and .csv file"""
 
         for filename in os.listdir(directory_path):
             if filename.endswith(".txt"):
                 txt_path = os.path.join(directory_path, filename)
-                attachment_path = os.path.join(directory_path, 'attachment')
+                # attachment_path = os.path.join(directory_path, 'attachment')
         
         chat_message_history = list()
 
@@ -39,7 +39,7 @@ class WhatssAppParser:
                         if attachment_file is not None:
                             # If there is an attachment file, save the file name.
                             data = {
-                                'datetime': datetime[1],
+                                'datetime': f'{datetime[1]} {datetime[2]}',
                                 'username': username[1],
                                 'message': os.path.join(attachment_path, attachment_file[1].replace(u'\u200e', '')),
                                 'is_file': True  # Remove U+200E
@@ -47,7 +47,7 @@ class WhatssAppParser:
                         else: 
                             # If there is no attachment file then it is a normal message.
                             data = {
-                                'datetime': datetime[1],
+                                'datetime': f'{datetime[1]} {datetime[2]}',
                                 'username': username[1],
                                 'message': chat_message,
                                 'is_file': False
@@ -55,7 +55,7 @@ class WhatssAppParser:
                     else: 
                         # If there is no username then the message is a message from SYSTEM.
                         data = {
-                            'datetime': datetime[1],
+                            'datetime': f'{datetime[1]} {datetime[2]}',
                             'username': "SYSTEM",
                             'message': re.search(self.pattern['message_system'], row)[1],
                             'is_file': False 
@@ -79,6 +79,9 @@ class WhatssAppParser:
                         chat_message_history[chat_message_index - 1]['message'] = f"{previous_chat_message}<br>{message_new_line}"
 
         history_df = pd.DataFrame(chat_message_history)
-        history_df['datetime'] = pd.to_datetime(history_df['datetime'], format='%d/%m/%y %H.%M')
+        try:
+            history_df['datetime'] = pd.to_datetime(history_df['datetime'], format='%d/%m/%y %H.%M')
+        except ValueError as e:
+            history_df['datetime'] = pd.to_datetime(history_df['datetime'], format='%d/%m/%y %H:%M')
 
         return history_df
