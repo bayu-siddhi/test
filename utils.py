@@ -86,16 +86,47 @@ def navigate_to_element(id: str) -> None:
     )
 
 
+def check_and_process_path(directory_path: str, file_name: str) -> tuple[str, str]:
+
+    def has_txt_file(directory_path):
+        return any(file.endswith(".txt") for file in os.listdir(directory_path))
+    
+    def has_attachment_dir(directory_path):
+        return "attachment" in os.listdir(directory_path) and os.path.isdir(os.path.join(directory_path, "attachment"))
+    
+    if has_txt_file(directory_path):
+        if has_attachment_dir(directory_path):
+            attachment_path = os.path.join(directory_path, 'attachment')
+            return directory_path, attachment_path
+        else:
+            return directory_path, directory_path
+    
+    directory_path = os.path.join(directory_path, file_name)
+    attachment_path = os.path.join(directory_path, 'attachment')
+    if os.path.exists(directory_path) and os.path.isdir(directory_path):
+        if has_txt_file(directory_path):
+            if has_attachment_dir(directory_path):
+                return directory_path, attachment_path
+            else:
+                return directory_path, directory_path
+        else:
+            raise FileNotFoundError(f"No .txt file found in the path: {directory_path}")
+    else:
+        raise FileNotFoundError(f"Invalid path: {directory_path}")
+
+
 # https://discuss.streamlit.io/t/unzipping/28001/3
 # https://stackoverflow.com/questions/3451111/unzipping-files-in-python
 def get_chat_history(uploaded_file: str) -> tuple[list, pd.DataFrame]:
+    file_name = os.path.splitext(uploaded_file.name)[0]
+    directory_path = os.path.join('data', file_name)
     with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-        zip_ref.extractall("data")
+        zip_ref.extractall(directory_path)
     
+    directory_path, attachment_path = check_and_process_path(directory_path, file_name)
+
     wa_parser = WhatssAppParser()
-    directory_path = os.path.join('data', uploaded_file.name)
-    directory_path = os.path.splitext(directory_path)[0]
-    history_df = wa_parser.parse(directory_path=directory_path)
+    history_df = wa_parser.parse(directory_path, attachment_path)
     
     return history_df
 
@@ -174,7 +205,7 @@ def display_chat_history(user: str, users: list, history_df: pd.DataFrame, theme
                         {profile_src if profile_src is not None else '<div></div>'}
                         <div class="chat-bubble {'user-bubble' if profile_src is not None else ''} {background_color}">
                             {chat['message']}
-                            <div class="timestamp">{time_str}</div>
+                            {f'<div class="timestamp">{time_str}</div>' if profile_src is not None else '<div></div>'}
                         </div>
                     </div>"""
                     st.markdown(chat_row, unsafe_allow_html=True)
